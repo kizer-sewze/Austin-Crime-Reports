@@ -1,0 +1,66 @@
+---
+title: "Final Project"
+author: "Seth"
+date: "2023-10-02"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+
+```{r cars, echo=FALSE}
+
+library(dplyr)
+library(ggplot2)
+library(readr)
+crime <- read_delim("crime.csv", delim = "\t", 
+    escape_double = FALSE, trim_ws = TRUE)
+```
+
+## Code
+
+
+
+```{r crime, echo=FALSE}
+
+
+crime <- crime %>% filter(grepl("2023", occ_date))
+crime$zip_code <- factor(crime$zip_code)
+crime$council_district <- factor(crime$council_district)
+```
+
+## Plots
+
+
+```{r plots}
+crime %>% filter(!is.na(council_district)) %>% mutate(family_violence = tolower(family_violence)) %>%
+  ggplot(aes(x = council_district , y = family_violence, color = family_violence)) +
+  geom_bar(stat = "identity", aes(fill = family_violence)) +
+  labs(x = "Council District", y = "Number of Crime Reports") +
+  ggtitle("Proportion of Family Violence Related Crimes Within Austin by Council District") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+crime %>% filter(!is.na(council_district)) %>% 
+  ggplot(aes(x = longitude, y = latitude, color = council_district)) +
+  geom_point(size = 0.1) +
+  labs(x = "Longitude", y = "Latitude") +
+  ggtitle("Austin Crimes by Council District") +
+  guides(color = guide_legend(override.aes = list(size = 10))) +
+  theme_minimal()
+
+
+crime %>% filter(latitude > 25 & (clearance_status != "")) %>% 
+  ggplot(aes(x = longitude, y = latitude, color = clearance_status)) +
+  geom_point(size = 0.1) +
+  labs(x = "Longitude", y = "Latitude") +
+  ggtitle("Austin Crime Clearance Status by Location") +
+  guides(color = guide_legend(override.aes = list(size = 3))) +
+  theme_minimal()
+```
+
+
