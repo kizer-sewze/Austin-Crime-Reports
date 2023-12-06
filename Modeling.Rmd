@@ -1,0 +1,373 @@
+---
+title: "Final Project"
+author: "Seth"
+date: "2023-10-02"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+
+```{r cars, echo=FALSE}
+
+library(dplyr)
+library(ggplot2)
+library(readr)
+crime <- read_delim("C:/Users/USER/Downloads/Crime_Reports (1).csv", delim = "\t", 
+    escape_double = FALSE, trim_ws = TRUE)
+
+View(crime)
+```
+
+## Code
+
+
+
+```{r crime, echo=FALSE}
+
+
+crime <- crime %>% filter(grepl("2023", occ_date))
+crime$zip_code <- factor(crime$zip_code)
+crime$council_district <- factor(crime$council_district)
+```
+
+## Plots
+
+
+```{r plots}
+crime %>% 
+  filter(!is.na(council_district)) %>%
+  mutate(family_violence = tolower(family_violence)) %>%
+    ggplot(aes(x = council_district , y = family_violence,
+               color = family_violence)) +
+    geom_bar(stat = "identity", aes(fill = family_violence)) +
+    labs(x = "Council District", y = "Number of Crime Reports") +
+    ggtitle("Proportion of Family Violence Related Crimes
+            Within Austin by Council District") +
+    theme_minimal() +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+```{r}
+only_cleared <- crime %>%
+  na.omit(clearance_date)
+
+crime <- crime %>%
+  # Convert columns to Date objects
+  mutate(across(c(rep_date, clearance_date), as.Date)) %>% 
+  # Calculate time difference
+  mutate(clearance_time = clearance_date - rep_date)
+
+cleared_crime <- crime %>%
+  na.omit(clearance_date)
+```
+
+```{r}
+
+library(lubridate)
+
+crime %>%
+  distinct(month(occ_date)) %>%
+  summarise(n())
+
+crime_with_month <- cleared_crime %>%
+  mutate(rep_month = month(rep_date))
+
+crime_with_month %>%
+  ggplot(aes(x = factor(rep_month),
+                                      y = clearance_time)) +
+  geom_bar(stat = "summary", fun = "mean", fill = "skyblue") +
+  labs(x = "Month", y = "Average Clearance",
+       title = "Average Clearance per Month") +
+  scale_x_discrete(labels = month.name) +  # Use month names on the x-axis
+  theme_minimal()
+```
+
+**We can see that the crimes that happened lately has less time. The reason for this phenomena is the fact that the cleared crimes from later this year are crimes that has been cleared in short time, and the others haven't been cleared yet. That's why we dropped the 'dates' from the explanatory features.**
+
+```{r}
+
+crime_with_month %>%
+  distinct(category_description) %>%
+  summarise(n())
+
+crime_with_month %>%
+  ggplot(aes(x = factor(category_description), y = clearance_time)) +
+  geom_bar(stat = "summary", fun = "mean", fill = "skyblue") +
+  labs(x = "Category Description", y = "Average Clearance Time (days)",
+       title = "Average Clearance Time per Crime Category") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))  # Adjust the angle as needed
+
+
+## median clearance
+crime_with_month %>%
+  ggplot(aes(x = factor(category_description), y = clearance_time)) +
+  geom_bar(stat = "summary", fun = "median", fill = "skyblue") +
+  labs(x = "Category Description", y = "Median Clearance Time (days)",
+       title = "Median Clearance Time per Crime Category") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))  # Adjust the angle as needed
+
+
+crime_with_month %>%
+  group_by(category_description) %>%
+  summarise(median(clearance_time))
+
+crime_with_month %>%
+  group_by(category_description) %>%
+  summarise(n())
+
+## Distrubtutions
+crime_with_month %>%
+  #filter(category_description == "Rape") %>%
+  ggplot(aes(x = clearance_time)) +
+    geom_density(color = "black", alpha=0.4, aes(fill = category_description)) +
+    geom_rug(color="purple", size=0.1) +
+    geom_vline(aes(xintercept = mean(clearance_time)), color = "red",
+               linetype = "dashed", size = 1) +
+    geom_vline(aes(xintercept = median(clearance_time)), color = "blue",
+               linetype = 4, size = 1)
+
+
+## log mean
+
+crime_with_month$log_clearance_time <-
+  log1p(as.numeric(crime_with_month$clearance_time))
+
+crime_with_month %>%
+  ggplot(aes(x = factor(category_description), y = log_clearance_time)) +
+    geom_bar(stat = "summary", fun = "mean", fill = "skyblue") +
+    labs(x = "Category Description", y = "Mean Log Clearance Time (days)",
+         title = "Mean Log Clearance Time per Crime Category") +
+    theme_minimal() +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1))  # Adjust the angle as needed
+
+
+## log mean - council district
+crime_with_month %>%
+  ggplot(aes(x = factor(council_district), y = log_clearance_time)) +
+    geom_bar(stat = "summary", fun = "mean", fill = "skyblue") +
+    labs(x = "Council District", y = "Mean Log Clearance Time (days)",
+         title = "Mean Log Clearance Time per Council District") +
+    theme_minimal()
+    #theme(axis.text.x = element_text(angle = 45, hjust = 1))  # Adjust the angle as needed
+
+
+```
+
+```{r}
+crime_with_month %>%
+  ggplot(aes(x = factor(council_district), y = clearance_time)) +
+  geom_bar(stat = "summary", fun = "mean", fill = "skyblue") +
+  labs(x = "Council District", y = "Average Clearance Time (days)",
+       title = "Average Clearance Time per Council District") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))  # Adjust the angle as needed
+```
+
+
+
+```{r}
+crime %>%
+  filter(!is.na(council_district) & longitude < -50) %>%
+  ggplot(aes(x = longitude, y = latitude, color = factor(council_district))) +
+  geom_point(size = 0.1) +
+  ggtitle("Austin Crimes by Council District") +
+  scale_color_manual(
+    name = "Council District",
+          values = c("#FF3333", "#33FF33", "#3333FF", "#FFFF33", "#FF33FF", "#33FFFF", "#666666", "#993399", "#339933", "#999933"),
+    breaks = 1:10,
+    labels = paste("District", 1:10)
+  ) +
+  guides(color = guide_legend(override.aes = list(size = 5))) +
+  theme_minimal() +
+  theme(axis.text.x = element_blank(),
+        axis.text.y = element_blank(),
+        axis.title.x = element_blank(),
+        axis.title.y = element_blank()) 
+```
+
+
+```{r}
+crime %>%
+  filter(latitude > 25 & (clearance_status != "")) %>%
+  mutate(clearance_status_label = case_when(
+    clearance_status == 'O' ~ 'Cleared by Exception',
+    clearance_status == 'N' ~ 'Not Cleared',
+    clearance_status == 'C' ~ 'Cleared by Arrest',
+    TRUE ~ as.character(clearance_status)
+  )) %>%
+  ggplot(aes(x = longitude, y = latitude, color = clearance_status_label)) +
+  geom_point(size = 0.1) +
+  labs(x = "Longitude", y = "Latitude") +
+  ggtitle("Austin Crime Clearance Status by Location") +
+  scale_color_manual(
+    values = c(
+      'Cleared by Exception' = 'skyblue',
+      'Not Cleared' = 'orange',
+      'Cleared by Arrest' = 'lightgreen'
+    ),
+    breaks = c('Cleared by Arrest', 'Not Cleared', 'Cleared by Exception')
+  ) +
+  guides(color = guide_legend(override.aes = list(size = 5))) +
+  theme_minimal() +
+  theme(axis.text.x = element_blank(),
+        axis.text.y = element_blank(),
+        axis.title.x = element_blank(),
+        axis.title.y = element_blank()) +
+  labs(color = "Clearance Status")
+```
+
+
+```{r}
+# Define the target variable and features
+target_variable <- 'clearance_time'
+features <- c('crime_type', 'ucr_code', 'family_violence',
+              'rep_time', 'location_type', 'zip_code', 'council_district',
+              'sector', 'district', 'pra', 'ucr_category',
+              'category_description')
+
+# features <- c('crime_type', 'ucr_code', 'family_violence', 'occ_date',
+#               'occ_time', 'rep_date', 'rep_time', 'location_type', 'zip_code',
+#               'council_district', 'sector', 'district', 'pra', 'ucr_category',
+#               'category_description')
+
+set.seed(42)  # Setting a seed for reproducibility
+train_indices <- sample(seq_len(nrow(cleared_crime)),
+                        size = 0.8 * nrow(cleared_crime))
+train_data <- cleared_crime[train_indices, ]
+test_data <- cleared_crime[-train_indices, ]
+
+
+# Train the Random Forest model
+rf_model <- randomForest(formula = as.formula(paste(target_variable, "~ .")),
+                         data = train_data)
+
+# Get feature importances from the model
+ # Use the appropriate column index
+feature_importances <- rf_model$importance[, 1] 
+
+# Create a data frame to store feature importances along with feature names
+importance_df <- data.frame('Feature' = names(rf_model$importance[, 1]),
+                            'Importance' = feature_importances)
+
+# Filter only the features of interest
+importance_df <- importance_df[importance_df$Feature %in% features, ]
+
+# Sort the data frame by importance values in descending order
+importance_df <- importance_df[order(-importance_df$Importance), ]
+
+# Create a bar plot to visualize feature importances
+ggplot(importance_df, aes(x = reorder(Feature, Importance), y = Importance)) +
+  geom_bar(stat = 'identity', fill = 'skyblue') +
+  labs(x = 'Features', y = 'Importance',
+       title = 'Random Forest Feature Importance') +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  coord_flip()
+
+
+ggplot(importance_df, aes(x = reorder(Feature, Importance), y = Importance)) +
+  geom_bar(stat = 'identity', fill = 'skyblue') +
+  labs(x = 'Features', y = 'Importance',
+       title = 'Random Forest Feature Importance') +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  coord_flip() +
+  scale_y_continuous(labels = function(x) format(x, scientific = FALSE))
+```
+
+
+```{r}
+
+cleared_crime$clearance_status <- factor(cleared_crime$clearance_status)
+
+# Define the target variable and features
+target_variable <- 'clearance_status'
+features <- c('crime_type', 'ucr_code', 'family_violence',
+              'rep_time', 'location_type', 'zip_code', 'council_district',
+              'sector', 'district', 'pra', 'ucr_category',
+              'category_description')
+
+# features <- c('crime_type', 'ucr_code', 'family_violence', 'occ_date',
+#               'occ_time', 'rep_date', 'rep_time', 'location_type', 'zip_code',
+#               'council_district', 'sector', 'district', 'pra', 'ucr_category',
+#               'category_description')
+
+set.seed(42)  # Setting a seed for reproducibility
+train_indices <- sample(seq_len(nrow(cleared_crime)),
+                        size = 0.8 * nrow(cleared_crime))
+train_data <- cleared_crime[train_indices, ]
+test_data <- cleared_crime[-train_indices, ]
+
+# Train the Random Forest model
+rf_model <- randomForest(formula = as.formula(paste(target_variable, "~ .")),
+                         data = train_data)
+
+# Get feature importances from the model
+ # Use the appropriate column index
+feature_importances <- rf_model$importance[, 1] 
+
+# Create a data frame to store feature importances along with feature names
+importance_df <- data.frame('Feature' = names(rf_model$importance[, 1]),
+                            'Importance' = feature_importances)
+
+# Filter only the features of interest
+importance_df <- importance_df[importance_df$Feature %in% features, ]
+
+# Sort the data frame by importance values in descending order
+importance_df <- importance_df[order(-importance_df$Importance), ]
+
+# Create a bar plot to visualize feature importances
+ggplot(importance_df, aes(x = reorder(Feature, Importance), y = Importance)) +
+  geom_bar(stat = 'identity', fill = 'skyblue') +
+  labs(x = 'Features', y = 'Importance',
+       title = 'Random Forest Feature Importance for Clearance Status') +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  coord_flip()
+```
+
+```{r}
+crime_with_month %>%
+  distinct(ucr_category) %>%
+  summarise(n())
+
+crime_with_month %>%
+  ggplot(aes(x = factor(ucr_category), y = clearance_status)) +
+  geom_bar(stat = "summary", fun = "sum", fill = "skyblue") +
+  labs(x = "Category Description", y = "Average Clearance Time (days)",
+       title = "Average Clearance Time per Crime Category") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))  # Adjust the angle as needed
+
+cleared_crime <- cleared_crime %>%
+  mutate(clearance_status_label = case_when(
+    clearance_status == 'O' ~ 'Cleared by Exception',
+    clearance_status == 'N' ~ 'Not Cleared',
+    clearance_status == 'C' ~ 'Cleared by Arrest',
+    TRUE ~ as.character(clearance_status)
+  ))
+
+# Create a data frame with counts for 'clearance_status' and 'ucr_category'
+count_data <- data.frame(table(cleared_crime$clearance_status_label,
+                               cleared_crime$ucr_category))
+
+# Rename columns for clarity
+colnames(count_data) <- c('Clearance_Status', 'UCR_Category', 'Count')
+
+# Create a bar plot
+  ggplot(count_data, aes(x = UCR_Category, y = Count,
+                         fill = Clearance_Status)) +
+  geom_bar(stat = 'identity', position = 'dodge') +
+  labs(x = 'UCR Category', y = 'Count', fill = 'Clearance Status',
+       title = 'Counts of Clearance Status by UCR Category') +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  scale_fill_manual(values = c("Cleared by Exception" = "green",
+                               "Not Cleared" = "red",
+                               "Cleared by Arrest" = "skyblue"))
+```
+
+
