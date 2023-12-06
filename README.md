@@ -8,7 +8,10 @@ Link to the data: https://data.austintexas.gov/Public-Safety/Crime-Reports/fdj4-
 The dataset contains information about crime in Austin with data starting from January 2018 that is updated weekly. The data is from the Austin Police Department. For the purposes of our project, we used only the data from January 2023 onwards, because of how large the dataset was. The dataset contains many different variables relating to Austin crimes, but the ones we are primarily interested in are the variables relating to location (zip code, district, council_district, address, location type), the type of crime (family violence), and the dates when the crime was committed or cleared (occured date time, report time, etc). 
 
 Our hypotheses are 
-  1) We hypothesize that districts closer to central Austin will have a greater proportion of family related crimes occur. 
-  2) We hypothesize that the closer to the city center that the crime occurred, the less likely it is to be resolved quickly or at all. 
+  1) The clearance rate of a council district is highly dependent on the number of crimes committed within it.
+  2) The clearance rate of a council district is highly dependent on its affluence.
+  3) The number of crimes committed per council district is highly dependent on its clearance rate.
+  4) The affluence of each council district is highly dependent on its  average clearance time. 
+
 
 
